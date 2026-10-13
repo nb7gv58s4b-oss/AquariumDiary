@@ -145,7 +145,7 @@ with tab_cruscotto:
 # ==================== TAB 2: PESCI E PIANTE ====================
 with tab_abitanti:
     st.subheader("🌿 Censimento della Biodiversità")
-    col_form, col_lista = st.columns()
+    col_form, col_lista = st.columns(2)
     
     with col_form:
         st.write("### ➕ Aggiungi Ospite")
