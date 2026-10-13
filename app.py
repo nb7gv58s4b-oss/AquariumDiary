@@ -20,29 +20,36 @@ if not os.path.exists(DB_FILE):
     df_init = pd.DataFrame(columns=COLONNE_VALORI)
     df_init.to_csv(DB_FILE, index=False)
 else:
-    df_check = pd.read_csv(DB_FILE)
-    mancanti = [c for c in COLONNE_VALORI if c not in df_check.columns]
-    if mancanti:
-        for m in mancanti:
-            df_check[m] = 0.0 if m != "Note" else ""
-        df_check = df_check[COLONNE_VALORI]
-        df_check.to_csv(DB_FILE, index=False)
+    try:
+        df_check = pd.read_csv(DB_FILE)
+        mancanti = [c for c in COLONNE_VALORI if c not in df_check.columns]
+        if mancanti:
+            for m in mancanti:
+                df_check[m] = 0.0 if m != "Note" else ""
+            df_check = df_check[COLONNE_VALORI]
+            df_check.to_csv(DB_FILE, index=False)
+    except Exception:
+        df_init = pd.DataFrame(columns=COLONNE_VALORI)
+        df_init.to_csv(DB_FILE, index=False)
 
 if not os.path.exists(BIO_FILE):
     df_bio_init = pd.DataFrame(columns=["Tipologia", "Nome", "Quantità", "Data Inserimento"])
     df_bio_init.to_csv(BIO_FILE, index=False)
 
 def carica_dati(file):
-    df = pd.read_csv(file)
-    if "Data" in df.columns:
-        df["Data"] = pd.to_datetime(df["Data"])
-        df = df.sort_values(by="Data")
-    return df.reset_index(drop=True)
+    try:
+        df = pd.read_csv(file)
+        if "Data" in df.columns and len(df) > 0:
+            df["Data"] = pd.to_datetime(df["Data"])
+            df = df.sort_values(by="Data")
+        return df.reset_index(drop=True)
+    except Exception:
+        return pd.DataFrame(columns=COLONNE_VALORI if file == DB_FILE else ["Tipologia", "Nome", "Quantità", "Data Inserimento"])
 
 def salva_valori(data, temp, ph, kh, gh, cl, no2, no3, note):
     df = pd.read_csv(DB_FILE)
     nuovo_dato = pd.DataFrame([[data, temp, ph, kh, gh, cl, no2, no3, note]], columns=df.columns)
-    df = pd.concat([df, nuovo_dato], ignore_index=True)
+    df = pd.concat([df, nuevo_dato], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
 def salva_bio(tipologia, nome, quantita, data_ins):
@@ -77,7 +84,7 @@ with tab_cruscotto:
         st.success("Test registrato con successo!")
         st.rerun()
 
-    if not df_acquario.empty:
+    if not df_acquario.empty and len(df_acquario) > 0:
         ultimo = df_acquario.iloc[-1]
         st.subheader("📌 Ultimo controllo effettuato")
         
@@ -115,13 +122,14 @@ with tab_cruscotto:
         st.markdown("---")
         st.subheader("📋 Registro storico dei test")
         df_visivo = df_acquario.copy()
-        df_visivo["Data"] = df_visivo["Data"].dt.strftime('%Y-%m-%d')
+        if "Data" in df_visivo.columns:
+            df_visivo["Data"] = pd.to_datetime(df_visivo["Data"]).dt.strftime('%Y-%m-%d')
         st.dataframe(df_visivo, use_container_width=True)
         
         st.write("### 🗑️ Elimina una misurazione specifica")
         col_del_id, col_del_btn = st.columns(2)
         with col_del_id:
-            riga_da_eliminare = st.number_input("Inserisci l'ID della riga da eliminare (numero a sinistra nella tabella dei test):", min_value=0, max_value=len(df_acquario)-1, step=1, key="del_index")
+            riga_da_eliminare = st.number_input("Inserisci l'ID della riga da eliminare:", min_value=0, max_value=len(df_acquario)-1, step=1, key="del_index")
         with col_del_btn:
             st.write(" ") 
             st.write(" ") 
@@ -133,12 +141,17 @@ with tab_cruscotto:
                 st.rerun()
     else:
         st.info("Nessun parametro inserito. Usa la barra laterale per registrare il primo test.")
+        
+    st.markdown("---")
+    if st.button("🚨 Svuota/Reset completo database parametri (Usa se ci sono errori grafici)"):
+        df_reset = pd.DataFrame(columns=COLONNE_VALORI)
+        df_reset.to_csv(DB_FILE, index=False)
+        st.success("Database ripristinato!")
+        st.rerun()
 
 # ==================== TAB 2: PESCI E PIANTE ====================
 with tab_abitanti:
     st.subheader("🌿 Censimento della Biodiversità")
-    
-    # RIGA CORRETTA CON (2): Spazio diviso esattamente a metà
     col_form, col_lista = st.columns(2)
     
     with col_form:
@@ -157,13 +170,13 @@ with tab_abitanti:
 
     with col_lista:
         st.write("### 📋 Abitanti censiti attualmente")
-        if not df_bio.empty:
+        if not df_bio.empty and len(df_bio) > 0:
             st.dataframe(df_bio, use_container_width=True)
             
             st.write("### 🗑️ Elimina un ospite specifico")
             col_del_bio_id, col_del_bio_btn = st.columns(2)
             with col_del_bio_id:
-                riga_bio_da_eliminare = st.number_input("Inserisci l'ID dell'ospite da eliminare (numero a sinistra nella tabella degli abitanti):", min_value=0, max_value=len(df_bio)-1, step=1, key="del_bio_index")
+                riga_bio_da_eliminare = st.number_input("Inserisci l'ID dell'ospite da eliminare:", min_value=0, max_value=len(df_bio)-1, step=1, key="del_bio_index")
             with col_del_bio_btn:
                 st.write(" ")
                 st.write(" ")
@@ -171,13 +184,8 @@ with tab_abitanti:
                     df_bio_mod = pd.read_csv(BIO_FILE)
                     df_bio_mod = df_bio_mod.drop(index=riga_bio_da_eliminare).reset_index(drop=True)
                     df_bio_mod.to_csv(BIO_FILE, index=False)
-                    st.success(f"Ospite in riga {riga_bio_da_eliminare} rimosso!")
+                    st.success(f"Ospite rimosso!")
                     st.rerun()
-                    
-            if st.button("🚨 Svuota intero registro abitanti", type="primary"):
-                df_svuota = pd.DataFrame(columns=["Tipologia", "Nome", "Quantità", "Data Inserimento"])
-                df_svuota.to_csv(BIO_FILE, index=False)
-                st.rerun()
         else:
             st.info("Nessun abitante inserito.")
 
