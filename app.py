@@ -29,20 +29,21 @@ def salva_dati(data, temp, ph, no2, no3, note):
 
 df_acquario = carica_dati()
 
-# --- SIDEBAR PER INSERIMENTO MANUALE (COSTO 0) ---
-sidebar = st.sidebar
-sidebar.header("📝 Inserisci i test manuali")
-sidebar.write("Esegui i test a gocce o a strisce e inserisci qui i valori riscontrati:")
+# --- SIDEBAR PER INSERIMENTO MANUALE (CORRETTA) ---
+st.sidebar.header("📝 Inserisci i test manuali")
+st.sidebar.write("Esegui i test a gocce o a strisce e inserisci qui i valori riscontrati:")
 
-with sidebar.form(key="registro_valori"):
-    data_ins = sidebar.date_input("Data del Test", datetime.date.today())
-    temp_ins = sidebar.number_input("Temperatura (°C)", min_value=15.0, max_value=35.0, value=24.5, step=0.5)
-    ph_ins = sidebar.number_input("Valore pH", min_value=5.5, max_value=8.5, value=7.0, step=0.1)
-    no2_ins = sidebar.number_input("Nitriti NO2 (mg/l)", min_value=0.0, max_value=2.0, value=0.0, step=0.05)
-    no3_ins = sidebar.number_input("Nitrati NO3 (mg/l)", min_value=0.0, max_value=100.0, value=10.0, step=5.0)
-    note_ins = sidebar.text_input("Interventi (es. Cambio d'acqua 20L, potatura)", "")
+# Usiamo il blocco 'with' legato direttamente alla sidebar per raggruppare i campi
+with st.sidebar.form(key="registro_valori"):
+    data_ins = st.date_input("Data del Test", datetime.date.today())
+    temp_ins = st.number_input("Temperatura (°C)", min_value=15.0, max_value=35.0, value=24.5, step=0.5)
+    ph_ins = st.number_input("Valore pH", min_value=5.5, max_value=8.5, value=7.0, step=0.1)
+    no2_ins = st.number_input("Nitriti NO2 (mg/l)", min_value=0.0, max_value=2.0, value=0.0, step=0.05)
+    no3_ins = st.number_input("Nitrati NO3 (mg/l)", min_value=0.0, max_value=100.0, value=10.0, step=5.0)
+    note_ins = st.text_input("Interventi (es. Cambio d'acqua 20L, potatura)", "")
     
-    submit = sidebar.form_submit_button("Registra nel Database")
+    # Adesso il pulsante è posizionato correttamente all'interno del form
+    submit = st.form_submit_button("Registra nel Database")
 
 if submit:
     salva_dati(data_ins, temp_ins, ph_ins, no2_ins, no3_ins, note_ins)
@@ -106,4 +107,3 @@ if not df_acquario.empty:
     st.dataframe(df_acquario, use_container_width=True)
 else:
     st.info("Benvenuto! Fai il tuo primo test chimico dell'acqua e inserisci i dati nella barra laterale sinistra per iniziare il monitoraggio.")
-
