@@ -20,7 +20,6 @@ if not os.path.exists(DB_FILE):
     df_init = pd.DataFrame(columns=COLONNE_VALORI)
     df_init.to_csv(DB_FILE, index=False)
 else:
-    # Aggiorna il file esistente se mancano i nuovi parametri
     df_check = pd.read_csv(DB_FILE)
     mancanti = [c for c in COLONNE_VALORI if c not in df_check.columns]
     if mancanti:
@@ -82,11 +81,9 @@ with tab_cruscotto:
         ultimo = df_acquario.iloc[-1]
         st.subheader("📌 Ultimo controllo effettuato")
         
-        # Righe metriche espanse per ospitare i nuovi valori
         col1, col2, col3, col4 = st.columns(4)
         col5, col6, col7, col8 = st.columns(4)
         
-        # Prima riga parametri
         st_temp = "Ottimale (23-26°C)" if 23 <= ultimo['Temperatura'] <= 26 else "⚠️ Fuori range ideale!"
         col1.metric("Temperatura", f"{ultimo['Temperatura']} °C", delta=st_temp)
         
@@ -96,7 +93,6 @@ with tab_cruscotto:
         col3.metric("KH (Carbonati)", f"{ultimo['KH']} °dKH")
         col4.metric("GH (Durezza)", f"{ultimo['GH']} °dGH")
         
-        # Seconda riga parametri
         st_cl = "Sicuro (Assente)" if ultimo['Cl'] == 0 else "🚨 PERICOLO CLORO!"
         col5.metric("Cloro (Cl2)", f"{ultimo['Cl']} mg/l", delta=st_cl, delta_color="inverse")
         
@@ -120,24 +116,20 @@ with tab_cruscotto:
         st.subheader("📋 Registro storico dei test")
         df_visivo = df_acquario.copy()
         df_visivo["Data"] = df_visivo["Data"].dt.strftime('%Y-%m-%d')
-        
-        # Mostriamo la tabella inserendo l'indice visibile per la cancellazione mirata
         st.dataframe(df_visivo, use_container_width=True)
         
-        # --- PANNELLO ELIMINAZIONE TEST ---
         st.write("### 🗑️ Elimina una misurazione specifica")
-        col_del_id, col_del_btn = st.columns([1, 3])
+        col_del_id, col_del_btn = st.columns(2)
         with col_del_id:
-            riga_da_eliminare = st.number_input("Inserisci l'ID della riga da eliminare (numero a sinistra nella tabella):", min_value=0, max_value=len(df_acquario)-1, step=1, key="del_index")
+            riga_da_eliminare = st.number_input("Inserisci l'ID della riga da eliminare (numero a sinistra nella tabella dei test):", min_value=0, max_value=len(df_acquario)-1, step=1, key="del_index")
         with col_del_btn:
-            st.write(" ") # Spazio per allineamento
             st.write(" ") 
-            if st.button("🗑️ Elimina Riga Selezionata", type="primary"):
+            st.write(" ") 
+            if st.button("🗑️ Elimina Test Selezionato", type="primary"):
                 df_modificabile = pd.read_csv(DB_FILE)
-                # Ordiniamo e resettiamo per sicurezza prima di droppare
                 df_modificabile = df_modificabile.drop(index=riga_da_eliminare).reset_index(drop=True)
                 df_modificabile.to_csv(DB_FILE, index=False)
-                st.success(f"Riga {riga_da_eliminare} eliminata con successo!")
+                st.success(f"Test in riga {riga_da_eliminare} eliminato!")
                 st.rerun()
     else:
         st.info("Nessun parametro inserito. Usa la barra laterale per registrare il primo test.")
@@ -145,7 +137,9 @@ with tab_cruscotto:
 # ==================== TAB 2: PESCI E PIANTE ====================
 with tab_abitanti:
     st.subheader("🌿 Censimento della Biodiversità")
-    col_form, col_lista = st.columns()
+    
+    # RIGA CORRETTA CON (2): Spazio diviso esattamente a metà
+    col_form, col_lista = st.columns(2)
     
     with col_form:
         st.write("### ➕ Aggiungi Ospite")
@@ -166,7 +160,21 @@ with tab_abitanti:
         if not df_bio.empty:
             st.dataframe(df_bio, use_container_width=True)
             
-            if st.button("❌ Svuota intero registro abitanti"):
+            st.write("### 🗑️ Elimina un ospite specifico")
+            col_del_bio_id, col_del_bio_btn = st.columns(2)
+            with col_del_bio_id:
+                riga_bio_da_eliminare = st.number_input("Inserisci l'ID dell'ospite da eliminare (numero a sinistra nella tabella degli abitanti):", min_value=0, max_value=len(df_bio)-1, step=1, key="del_bio_index")
+            with col_del_bio_btn:
+                st.write(" ")
+                st.write(" ")
+                if st.button("🗑️ Elimina Ospite Selezionato"):
+                    df_bio_mod = pd.read_csv(BIO_FILE)
+                    df_bio_mod = df_bio_mod.drop(index=riga_bio_da_eliminare).reset_index(drop=True)
+                    df_bio_mod.to_csv(BIO_FILE, index=False)
+                    st.success(f"Ospite in riga {riga_bio_da_eliminare} rimosso!")
+                    st.rerun()
+                    
+            if st.button("🚨 Svuota intero registro abitanti", type="primary"):
                 df_svuota = pd.DataFrame(columns=["Tipologia", "Nome", "Quantità", "Data Inserimento"])
                 df_svuota.to_csv(BIO_FILE, index=False)
                 st.rerun()
