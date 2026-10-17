@@ -3,12 +3,13 @@ import pandas as pd
 import datetime
 import plotly.express as px
 import os
+import io
 
 # 1. Configurazione della pagina
 st.set_page_config(page_title="Acquario Pro Monitor", page_icon="🐠", layout="wide")
 st.title("🐠 Monitoraggio Acquario Avanzato")
 
-# Nome dei file di salvataggio
+# Nome dei file di salvataggio locali (cache server)
 DB_FILE = "acquario_dolce_dati.csv"
 BIO_FILE = "acquario_biodiversita.csv"
 
@@ -45,6 +46,54 @@ def carica_biodiversita():
 
 df_acquario = carica_parametri()
 df_bio = carica_biodiversita()
+
+# ==================== BARRA LATERALE PER LA SICUREZZA DEI DATI ====================
+st.sidebar.markdown("---")
+st.sidebar.header("💾 Salva / Ripristina Database")
+st.sidebar.write("Usa questa sezione se il server si resetta per non perdere i dati.")
+
+# Esportazione Parametri
+if not df_acquario.empty:
+    csv_parametri = df_acquario.to_csv(index=False).encode('utf-8')
+    st.sidebar.download_button(
+        label="📥 Scarica Backup Parametri",
+        data=csv_parametri,
+        file_name="backup_parametri_acquario.csv",
+        mime="text/csv",
+    )
+
+# Esportazione Biodiversità
+if not df_bio.empty:
+    csv_bio = df_bio.to_csv(index=False).encode('utf-8')
+    st.sidebar.download_button(
+        label="📥 Scarica Backup Abitanti",
+        data=csv_bio,
+        file_name="backup_abitanti_acquario.csv",
+        mime="text/csv",
+    )
+
+st.sidebar.markdown("---")
+st.sidebar.write("🔄 **Ripristina file salvato:**")
+file_parametri_caricato = st.sidebar.file_uploader("Carica file parametri (.csv)", type=["csv"], key="restore_param")
+if file_parametri_caricato is not None:
+    try:
+        df_caricato = pd.read_csv(file_parametri_caricato)
+        df_caricato.to_csv(DB_FILE, index=False)
+        st.sidebar.success("Parametri caricati nel database!")
+        st.rerun()
+    except:
+        st.sidebar.error("Errore nel caricamento del file.")
+
+file_bio_caricato = st.sidebar.file_uploader("Carica file abitanti (.csv)", type=["csv"], key="restore_bio")
+if file_bio_caricato is not None:
+    try:
+        df_bio_caricato = pd.read_csv(file_bio_caricato)
+        df_bio_caricato.to_csv(BIO_FILE, index=False)
+        st.sidebar.success("Abitanti caricati nel database!")
+        st.rerun()
+    except:
+        st.sidebar.error("Errore nel caricamento del file.")
+
 
 # 4. Creazione dei Tab dell'interfaccia
 tab_cruscotto, tab_abitanti, tab_galleria = st.tabs(["📊 Parametri & Storico", "🌿 Pesci e Piante", "📸 Galleria Foto"])
@@ -113,7 +162,7 @@ with tab_cruscotto:
                 st.success("Test eliminato!")
                 st.rerun()
     else:
-        st.info("Benvenuto! Il database è vuoto. Usa la barra a sinistra per inserire i primi dati.")
+        st.info("Benvenuto! Il database è vuoto o il server è stato riavviato. Se hai un file di backup, caricalo dalla barra laterale a sinistra, oppure inserisci un nuovo test manuale.")
 
     st.markdown("---")
     if st.button("🚨 Svuota/Reset completo database parametri"):
